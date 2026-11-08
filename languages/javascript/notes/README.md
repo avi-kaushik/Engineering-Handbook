@@ -30,6 +30,13 @@ notes/
 |---|---|---|
 | 001 | Introduction to JavaScript: Definition, Origin, Pros & Cons, Applications | [001-introduction-to-javascript.md](001-getting-started/001-introduction-to-javascript.md) |
 
+### 002 — Fundamentals
+
+| # | Topic | Notes |
+|---|---|---|
+| 001 | Variables & Data Types: The 8 Types, `typeof`, Primitives vs Objects, Truthy & Falsy | [001-variables-and-data-types.md](002-fundamentals/001-variables-and-data-types.md) |
+| 002 | var, let & const: Scope, Hoisting, TDZ & the Classic Loop Question | [002-var-let-const.md](002-fundamentals/002-var-let-const.md) |
+
 ---
 
 ## ✍️ Note Format
