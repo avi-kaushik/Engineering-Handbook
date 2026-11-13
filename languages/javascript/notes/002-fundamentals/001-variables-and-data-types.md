@@ -207,7 +207,7 @@ after:   s ──► "HELLO"        "hello" itself was never modified
 | `typeof Symbol()` | `"symbol"` | ✅ |
 | `typeof {}` | `"object"` | ✅ |
 | `typeof function(){}` | `"function"` | ✅ functions get their own label |
-| `typeof null` | `"object"` | ⚠️ **Trap 1**: a 1995 bug kept forever (note 001) → check `x === null` |
+| `typeof null` | `"object"` | ⚠️ **Trap 1**: legacy behaviour preserved for compatibility ([origins](../001-getting-started/002-origins-netscape-sun-and-the-10-day-prototype.md#4-four-quirks-worth-explaining)) → check `x === null` |
 | `typeof []` | `"object"` | ⚠️ **Trap 2**: arrays are objects → use `Array.isArray(x)` |
 | `typeof NaN` | `"number"` | ⚠️ **Trap 3** → use `Number.isNaN(x)` |
 

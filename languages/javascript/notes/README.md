@@ -29,6 +29,9 @@ notes/
 | # | Topic | Notes |
 |---|---|---|
 | 001 | Introduction to JavaScript: Definition, Origin, Pros & Cons, Applications | [001-introduction-to-javascript.md](001-getting-started/001-introduction-to-javascript.md) |
+| 002 | Origins: Netscape–Sun, Naming, the 10-Day Prototype, Quirks & Compatibility | [002-origins-netscape-sun-and-the-10-day-prototype.md](001-getting-started/002-origins-netscape-sun-and-the-10-day-prototype.md) |
+| 003 | JIT Compilation: Ignition, Sparkplug, Maglev, TurboFan & Deoptimisation | [003-jit-compilation-and-v8.md](001-getting-started/003-jit-compilation-and-v8.md) |
+| 004 | JavaScript vs ECMAScript: Standardisation, TC39, Engines & Runtimes | [004-javascript-vs-ecmascript-engines-and-runtimes.md](001-getting-started/004-javascript-vs-ecmascript-engines-and-runtimes.md) |
 
 ### 002 — Fundamentals
 
@@ -48,6 +51,6 @@ notes/
 > One-line takeaway
 
 1..n  Concept sections (definition → why → diagram → example)
-      Quick Recall — interview one-liners table
       Mental model / summary diagram
+      Quick Recall — interview one-liners table (final section)
 ```
