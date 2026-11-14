@@ -1,385 +1,247 @@
 # 001 — Variables & Data Types
 
-> **One-line takeaway:** A variable is a **name tag with an arrow** pointing at a value. JavaScript has **8 types**: 7 **primitives** (simple, unchangeable, *photocopied* when you copy them) and **objects** (changeable, *shared like a Google Doc link*).
-
-> 🧪 **How to use this note:** Whenever you see **Predict the output**, stop and answer in
-> your head *before* opening the answer. Open DevTools (F12 → Console) and run the snippets
-> yourself. You remember best what you get wrong first.
+> **One-line takeaway:** A binding names a value. **Primitives are immutable; objects have
+> identity.** Assignment copies a value, so copying an object reference shares the object.
 
 ---
 
-## 1. What Is a Variable?
+## 1. Core Mental Model — Binding ≠ Value
 
-> **A variable is a name that points to a value, so your code can use that value later.**
-
-### ❌ The "box" picture (misleading)
-
-```text
-┌─────┐
-│  5  │  a       "a is a box with 5 inside"
-└─────┘
-```
-
-### ✅ The "arrow" picture (accurate)
-
-```text
-  a  ───────►  5          "a is a name tag; its arrow points at the value 5"
-```
-
-Why does it matter? Watch what happens with objects:
+A **binding** associates an identifier with a value within a scope. With dynamic typing,
+values have types; a reassignable binding can hold different types over time.
 
 ```js
-const user  = { name: "Avi" };
-const admin = user;              // copy the variable…
-admin.name  = "Sam";
-console.log(user.name);          // ???
+let result = 42;
+result = "ready"; // valid: the binding now holds a string
 ```
 
 ```text
-  user  ──┐
-          ├──►  { name: "Sam" }     ONE object, TWO arrows
-  admin ──┘
+Binding → value
+          ├── Primitive: immutable value
+          └── Object: identity that multiple bindings can share
 ```
 
-`admin = user` copied the **arrow**, not the object. Both names point at the same thing,
-so the answer is **`"Sam"`**. In the box picture this makes no sense. In the arrow picture
-it is obvious.
-
-> 🧠 **Remember:** *Arrows, not boxes.* Almost every "weird" JavaScript bug about copying,
-> `const` or `===` disappears once you think this way.
-
-### Declaring a variable
-
-```js
-const name = "Avi";   // can't point the arrow elsewhere later → your default
-let   age  = 25;      // can point the arrow elsewhere later
-var   old  = true;    // the 1995 way → avoid in new code
-```
-
-> The full story of `var`, `let` and `const` (scope, hoisting, the TDZ and the famous loop
-> question) has its own note: [002 — var, let & const](002-var-let-const.md).
-
-### Naming rules
-
-```text
-✅ Can start with   a letter, $ or _          userName, $el, _id
-❌ Cannot start with a digit                   2fast
-❌ Cannot be         a reserved word            class, return, let
-⚠️ Case-sensitive    age and Age are DIFFERENT variables
-```
-
-| Convention | Used for | Example |
-|---|---|---|
-| `camelCase` | variables & functions | `userName`, `getTotal` |
-| `UPPER_SNAKE_CASE` | fixed config constants | `MAX_RETRIES`, `API_URL` |
-| `PascalCase` | classes & React components | `UserProfile` |
-| `is` / `has` / `can` prefix | booleans | `isLoggedIn`, `hasAccess` |
+**Reassignment changes a binding; mutation changes object state.** `const` prevents the
+former; see
+[002 — var, let & const](002-var-let-const.md).
 
 ---
 
-## 2. Data Types: The 8 Types
+## 2. Key Concepts — Seven Primitives + Objects
 
-> **In JavaScript, types belong to VALUES, not to variables.** A variable can point to a
-> number now and a string later. That's what *dynamically typed* means.
-
-```js
-let v = 42;          // v → a number
-v = "forty-two";     // v → a string   (totally legal)
-```
-
-### The family tree
-
-```text
-                        JavaScript types (8)
-                                │
-           ┌────────────────────┴────────────────────┐
-           ↓                                         ↓
-     PRIMITIVES (7)                             OBJECT (1)
-  simple · immutable · photocopied     complex · mutable · shared by link
-           │                                         │
-  string   number   bigint                {} plain objects   [] arrays
-  boolean  undefined  null                functions          Date, Map, Set
-  symbol                                  RegExp, Promise, Error …
-```
-
-> 🧠 **Memory hook for the 7 primitives:** **"S**even **N**ice **B**unnies **B**ounce
-> **U**nder **N**ew **S**ky" → **S**tring, **N**umber, **B**igint, **B**oolean,
-> **U**ndefined, **N**ull, **S**ymbol. Everything else is an **object**, including arrays
-> and functions.
-
-### Meet the primitives
-
-| Type | Example | In one line |
+| Type | Example | Recall point |
 |---|---|---|
-| **string** | `"hi"`, `'hi'`, `` `Hi ${name}` `` | Text. Backticks allow `${}` and multiple lines |
-| **number** | `42`, `3.14`, `-7`, `NaN`, `Infinity` | **One** type for ints *and* decimals (64-bit float) |
-| **bigint** | `9007199254740993n` | Huge whole numbers; note the `n` at the end |
-| **boolean** | `true`, `false` | Yes / no |
-| **undefined** | `let x;` | "Nothing has been put here **yet**" |
-| **null** | `let x = null;` | "I **deliberately** set this to empty" |
-| **symbol** | `Symbol("id")` | A guaranteed-unique value, used as hidden object keys |
+| **string** | `"hi"`, `"😀"` | Immutable UTF-16 text: `.length` counts code units, not necessarily characters. |
+| **number** | `42`, `3.14`, `NaN`, `Infinity` | IEEE 754 binary64; integers and fractions share one type. |
+| **bigint** | `9007199254740993n` | Exact integers; see the Number/BigInt comparison below. |
+| **boolean** | `true`, `false` | Primitives, unlike wrapper objects: `new Boolean(false)` is truthy. |
+| **undefined** | `undefined` | Often an absent value; can also be explicitly assigned. |
+| **null** | `null` | Common convention for intentional absence; a distinct primitive. |
+| **symbol** | `Symbol("id")` | Each `Symbol()` call creates a unique value; symbol keys are discoverable, not private. |
+| **object** | `{}`, `[]`, functions, `Map` | Objects have identity and can be mutable; arrays and functions are not separate language types. |
 
-### `undefined` vs `null`: the parking spot analogy
+Reference: [MDN type overview](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Data_structures).
 
-```text
-undefined → an empty parking spot nobody has used yet
-            (the ENGINE's default: unset variable, missing property,
-             missing argument, function with no return)
+### Symbol — keys without accidental collisions
 
-null      → a spot with a "RESERVED, intentionally empty" cone
-            (YOU put it there on purpose)
-```
+Symbols give independent code non-colliding property keys. **Descriptions label; they
+do not establish identity.**
 
-> 🧪 **Predict the output**
-> ```js
-> let a;
-> const obj = {};
-> function f() {}
-> console.log(a, obj.color, f());
-> ```
+| Form | Meaning |
+|---|---|
+| `Symbol("id")` | Fresh unique primitive on every call. |
+| `Symbol.for("app.id")` | Creates/retrieves a symbol in the shared registry; repeated keys share identity. |
+| `Symbol.iterator` | Well-known key for the iterator-producing method; used by `for...of` and iterable spread (`[...value]`). |
+| `Symbol.toPrimitive` | Well-known key for custom object-to-primitive conversion; must return a primitive. |
 
-<details>
-<summary>Show answer</summary>
+`Object.keys` and `for...in` omit symbol keys; `Object.getOwnPropertySymbols` and
+`Reflect.ownKeys` discover them. **Collision avoidance is not privacy.** Enumerable symbol
+properties are copied by object spread. See [MDN: Symbol](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol);
+challenge C applies this to plugin metadata.
 
-`undefined undefined undefined`: an unassigned variable, a missing property and a function
-with no `return` all give `undefined`. You never get `null` unless someone wrote it.
-</details>
+### `undefined` vs `null` vs an undeclared name
 
-### Number: one type, a few surprises
+| Situation | Result / meaning |
+|---|---|
+| `let x;`, a missing argument, a function returning no value | `undefined` |
+| Missing ordinary property, e.g. `({}).missing` | `undefined`; an existing property can also hold `undefined` |
+| `const x = null` | Explicit null value; APIs can return null too. |
+| Reading a name with no binding | `ReferenceError`, not an undefined value |
 
-> 🧪 **Predict the output** of each line before opening:
-> ```js
-> 0.1 + 0.2 === 0.3
-> typeof NaN
-> NaN === NaN
-> 1 / 0
-> 9007199254740992 === 9007199254740993
-> ```
-
-<details>
-<summary>Show answers</summary>
-
-| Code | Result | Why |
-|---|---|---|
-| `0.1 + 0.2 === 0.3` | `false` | Binary floats can't store 0.1 exactly → `0.30000000000000004` |
-| `typeof NaN` | `"number"` | "Not-a-Number" is a special *number* value |
-| `NaN === NaN` | `false` | NaN equals nothing, not even itself → use `Number.isNaN(x)` |
-| `1 / 0` | `Infinity` | No crash, just a special number |
-| `2⁵³ === 2⁵³ + 1` | `true` | Past `Number.MAX_SAFE_INTEGER` (2⁵³ − 1), precision is lost → use `bigint` |
-</details>
-
-> 💼 **Real-world rule:** never store money as `19.99`. Store **paise/cents** as integers
-> (`1999`) to dodge float errors.
-
-### Primitives can't be changed, only replaced
-
-```js
-let s = "hello";
-s[0] = "H";            // silently ignored
-console.log(s);        // "hello"
-
-s = s.toUpperCase();   // makes a NEW string and moves the arrow to it
-console.log(s);        // "HELLO"
-```
-
-```text
-before:  s ──► "hello"
-after:   s ──► "HELLO"        "hello" itself was never modified
-```
-
-> 🤔 *But wait, how does `"hi".length` work if a string isn't an object?* JS briefly wraps
-> it in a temporary `String` object to find the property, then throws the wrapper away.
-> This is called **autoboxing**.
+Both are **nullish**: `null == undefined`, but `null !== undefined`. Use
+`Object.hasOwn(obj, key)` to distinguish an absent own property from one set to `undefined`.
 
 ---
 
 ## 3. Checking Types with `typeof`
 
-`typeof` tells you a value's type as a string. Mostly reliable, with **three traps**:
+For non-null primitives, `typeof` returns the lowercase type name; objects need finer checks.
 
-| Expression | Result | |
+| Expression | Result | Use instead / implication |
 |---|---|---|
-| `typeof "a"` | `"string"` | ✅ |
-| `typeof 1` | `"number"` | ✅ |
-| `typeof 1n` | `"bigint"` | ✅ |
-| `typeof true` | `"boolean"` | ✅ |
-| `typeof undefined` | `"undefined"` | ✅ |
-| `typeof Symbol()` | `"symbol"` | ✅ |
-| `typeof {}` | `"object"` | ✅ |
-| `typeof function(){}` | `"function"` | ✅ functions get their own label |
-| `typeof null` | `"object"` | ⚠️ **Trap 1**: legacy behaviour preserved for compatibility ([origins](../001-getting-started/002-origins-netscape-sun-and-the-10-day-prototype.md#4-four-quirks-worth-explaining)) → check `x === null` |
-| `typeof []` | `"object"` | ⚠️ **Trap 2**: arrays are objects → use `Array.isArray(x)` |
-| `typeof NaN` | `"number"` | ⚠️ **Trap 3** → use `Number.isNaN(x)` |
+| `typeof null` | `"object"` | Legacy behaviour; test `value === null`. Null remains a primitive. |
+| `typeof []` | `"object"` | Use `Array.isArray(value)`. |
+| `typeof function () {}` | `"function"` | Functions are callable objects, not a ninth language type. |
+| `typeof NaN` | `"number"` | Use `Number.isNaN(value)` to detect NaN without coercion. |
+| `typeof absentName` (no binding) | `"undefined"` | Special allowance for an unresolvable identifier. |
+| `typeof x` before `let x` in its scope | Throws `ReferenceError` | A TDZ binding exists but is uninitialised. |
+
+See [MDN: `typeof`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof)
+and the [TDZ explanation](002-var-let-const.md#3-hoisting-initialisation--the-tdz).
+
+### Specialised objects are still the Object language type
+
+Built-ins add behaviours/internal state, not extra language types. Use category checks:
+
+| Category | Primary purpose | Usual check for expected values |
+|---|---|---|
+| **Array** | Indexed collection | `Array.isArray(value)` |
+| **Function** | Callable behaviour | `typeof value === "function"` |
+| **Map / Set** | Key–value entries / unique values | `value instanceof Map` / `Set` |
+| **Date** | Time value | `value instanceof Date`; invalid dates still pass. |
+| **Promise** | Eventual fulfilment/rejection | `value instanceof Promise` for local instances; thenables are broader. |
+| **RegExp** | Text pattern matching | `value instanceof RegExp` |
+
+`instanceof` checks prototype relationships; it can be customised and fail across realms
+(iframes). `Array.isArray` works across realms. Error, typed arrays, etc. are objects too.
+See [MDN: instanceof limitations](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/instanceof#instanceof_and_multiple_realms).
 
 ---
 
-## 4. Primitive vs Reference: Photocopy vs Shared Link
+## 4. Critical Distinctions — Values, Identity & Copying
 
-This is the **most important idea** in the note.
+| Operation | Primitive | Object |
+|---|---|---|
+| **Assignment / argument passing** | Copies the primitive value. | Copies a reference to the same object. |
+| **Mutation** | Cannot mutate the value; a binding may be reassigned. | Can change state if the object permits it. |
+| **Strict equality** | Compares without coercion; watch NaN and signed zero. | Tests identity, not structural contents. |
 
-```text
-PRIMITIVE  = a PHOTOCOPY
-             Copy it, scribble on your copy → the original is untouched.
+JavaScript is **pass-by-value** (*call by sharing* for objects): a callee can mutate a
+shared object, but rebinding its parameter cannot rebind the caller's variable.
 
-OBJECT     = a SHARED GOOGLE DOC LINK
-             Copy the link, edit the doc → everyone with the link sees the change.
-```
+`"hi".length` uses wrapper semantics; it does not make strings mutable. A string index/property
+write is ignored in sloppy mode and throws `TypeError` in strict mode. See
+[MDN: primitive writes](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Strict_mode#setting_properties_on_primitive_values).
 
-### See it in code
+### Copying boundaries
 
-```js
-// 📄 Primitive: photocopy
-let a = 10;
-let b = a;       // b gets its own copy of 10
-b = 20;
-console.log(a);  // 10 ✅ untouched
+| Operation | What is shared? |
+|---|---|
+| `const b = a` | The entire object; `a === b`. |
+| `{ ...a }`, `[...a]`, `Object.assign({}, a)` | A new outer container; nested object references remain shared. |
+| `structuredClone(a)` | Deep-copies supported data, preserving cycles and internal sharing. |
 
-// 🔗 Object: shared link
-const p1 = { name: "Avi" };
-const p2 = p1;   // p2 gets a copy of the LINK
-p2.name = "Sam";
-console.log(p1.name);  // "Sam" ⚠️ same document
-```
-
-```text
-Primitives:   a ──► 10          b ──► 20          two separate values
-
-Objects:      p1 ──┐
-                   ├──►  { name: "Sam" }          one object, two links
-              p2 ──┘
-```
-
-### `===` compares links, not contents
-
-> 🧪 **Predict the output**
-> ```js
-> console.log("ab" === "ab");
-> console.log({} === {});
-> console.log([1, 2] === [1, 2]);
-> const o = {};
-> console.log(o === o);
-> ```
-
-<details>
-<summary>Show answer</summary>
-
-`true`, `false`, `false`, `true`.
-
-Primitives compare by **value**. Objects compare by **identity**: "are these two arrows
-pointing at the *same* object?" Two separately written `{}` are two different objects,
-even if they look identical.
-</details>
-
-### Making a real copy
-
-```text
-Shallow copy   { ...obj }   [...arr]   Object.assign({}, obj)
-               → top level copied, NESTED objects still shared
-
-Deep copy      structuredClone(obj)
-               → everything copied (except functions)
-```
-
-> 🧪 **Predict the output**
-> ```js
-> const a = { name: "Avi", address: { city: "Delhi" } };
-> const b = { ...a };
-> b.name = "Sam";
-> b.address.city = "Pune";
-> console.log(a.name, a.address.city);
-> ```
-
-<details>
-<summary>Show answer</summary>
-
-`"Avi" "Pune"`. The spread copied the top level (so `name` is separate) but
-`address` is a nested object, so only its **link** was copied. Both `a` and `b` share
-the same address object. Use `structuredClone(a)` for a full copy.
-</details>
-
-### Passing to functions: "call by sharing"
-
-JavaScript **always passes a copy**. For an object, the copy is a copy of the *link*:
-
-```js
-function rename(u)  { u.name = "X"; }        // edits the shared doc → caller sees it ✅
-function replace(u) { u = { name: "Y" }; }   // only repoints the local link → caller unaffected ❌
-```
+`structuredClone` is a **host API** with [limitations](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm):
+functions, DOM nodes and symbol values cannot be cloned. Custom prototypes, accessor
+descriptors and class private elements are not preserved.
 
 ---
 
-## 5. Truthy & Falsy
+## 5. Edge Cases — Numbers & Truthiness
 
-In an `if`, `&&`, `||` or `!`, every value is treated as either true-ish or false-ish.
+### Number vs BigInt
 
-### The 8 falsy values (the complete list)
+| Property | Number | BigInt |
+|---|---|---|
+| **Representation** | IEEE 754 binary64: integers and fractions | Arbitrary-precision integers, within implementation resources |
+| **Integer precision** | Safe range: `±(2 ** 53 - 1)`; `Number.MAX_SAFE_INTEGER` is the upper bound | Exact integer arithmetic beyond that range |
+| **Division** | `5 / 2` → `2.5`; `1 / 0` → `Infinity` | `5n / 2n` → `2n` (toward zero); division by `0n` throws |
+| **Mixed arithmetic** | `1 + 1n` throws `TypeError` | Convert explicitly; Number conversion can lose precision. |
+| **JSON** | Serialises; `NaN`/infinities become `null` | `JSON.stringify` throws by default; use a string encoding or explicit replacer/reviver contract. |
 
-```text
-false    0    -0    0n    ""    null    undefined    NaN
-```
+`0.1 + 0.2 !== 0.3`: binary rounding; BigInt does not solve decimals. `NaN !== NaN`;
+`0 === -0`. `Object.is` distinguishes signed zero and equates NaN with itself.
+Money needs a representation and rounding policy. See [MDN: Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)
+and [BigInt](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt);
+challenge B shows precision loss.
 
-**Everything else is truthy.**
+### Falsy is not the same as nullish
 
-> 🧪 **Truthy or falsy?** Decide for each: `"0"`, `"false"`, `" "`, `[]`, `{}`, `-1`
+The falsy primitives are **`false`, `0`, `-0`, `0n`, `""`, `null`, `undefined`, `NaN`**.
+Non-empty strings (`"0"`, `"false"`) and ordinary objects (`[]`, `{}`) are truthy.
+Legacy exception: `document.all` is a falsy object with `typeof` → `"undefined"`.
+See [MDN: falsy values](https://developer.mozilla.org/en-US/docs/Glossary/Falsy).
 
-<details>
-<summary>Show answer</summary>
-
-**All truthy.** `"0"`, `"false"` and `" "` are non-empty strings. `[]` and `{}` are
-objects, and *every* object is truthy, even an empty one. `-1` is a non-zero number.
-</details>
-
-### `||` vs `??`: a bug you will actually meet
-
-```js
-const itemsInCart = 0;
-
-itemsInCart || 10    // 10 ❌  0 is falsy, so a REAL value is thrown away
-itemsInCart ?? 10    // 0  ✅  ?? only falls back on null / undefined
-```
-
-> 💼 Use `??` for defaults whenever `0`, `""` or `false` are valid values.
+`a || fallback` defaults on any falsy value; `a ?? fallback` defaults only on nullish
+values: `0 || 10` → `10`, but `0 ?? 10` → `0`. Both short-circuit and return an operand,
+not necessarily a boolean. Prefer `??` when `0`, `false` or `""` is valid data.
 
 ---
 
-## 6. Quick Recall — Interview One-Liners
+## 6. Active Recall — Predict Before Expanding
+
+### A. Sharing, shallow copying & parameter reassignment
+
+```js
+const original = { count: 1, nested: { count: 1 } };
+const copy = { ...original };
+function update(value) {
+  value.nested.count++;
+  value = { count: 99 };
+}
+update(copy);
+copy.count++;
+console.log(original.count, original.nested.count, copy.count);
+console.log(original === copy, original.nested === copy.nested);
+```
+
+<details>
+<summary>Show answer & reason</summary>
+
+`1 2 2`, then `false true`. Spread creates a new outer object but shares `nested`.
+Parameter reassignment stays local; the nested mutation affects both objects.
+
+</details>
+
+### B. Precision beyond the safe integer range
+
+```js
+const n = 2 ** 53;
+console.log(n === n + 1);
+console.log(BigInt(n) + 1n === BigInt(n + 1));
+```
+
+<details>
+<summary>Show answer & reason</summary>
+
+`true`, then `false`. Number arithmetic rounds `n + 1` back to `n`; BigInt preserves the
+extra integer. Converting an already-rounded Number cannot recover lost precision.
+
+</details>
+
+### C. Metadata that does not overwrite application fields
+
+```js
+const pluginId = Symbol("id");
+const user = { id: "public", [pluginId]: "plugin" };
+console.log(user.id, user[Symbol("id")], user[pluginId]);
+console.log(Object.keys(user));
+console.log(Reflect.ownKeys(user).length);
+```
+
+<details>
+<summary>Show answer & reason</summary>
+
+`"public" undefined "plugin"`; `["id"]`; `2`. The plugin's symbol key avoids the public
+string key. A fresh symbol with the same label is different; reflection still finds the key.
+
+</details>
+
+**Next:** [002 — var, let & const](002-var-let-const.md).
+
+---
+
+## 7. Quick Recall — Interview One-Liners
 
 | Question | Crisp answer |
 |---|---|
-| **What is a variable?** | A name (binding) that points to a value: an arrow, not a box. |
-| **How many data types?** | 8: string, number, bigint, boolean, undefined, null, symbol (primitives) + object. |
-| **Are arrays and functions separate types?** | No, both are objects. `typeof []` is `"object"`; `typeof fn` is `"function"`. |
-| **What does dynamically typed mean?** | Types belong to values, so one variable can hold different types over time. |
-| **`null` vs `undefined`?** | `undefined` = nothing assigned yet (engine). `null` = intentionally empty (programmer). `null == undefined` but not `===`. |
-| **Why is `typeof null` `"object"`?** | A bug from the first implementation, kept for backward compatibility. |
-| **How to check for an array? For NaN?** | `Array.isArray(x)`; `Number.isNaN(x)`. |
-| **Primitive vs reference?** | Primitives are immutable and copied by value (photocopy). Objects are mutable and copying copies the reference (shared link). |
-| **Why is `{} === {}` false?** | Objects compare by identity, and those are two different objects. |
-| **Shallow vs deep copy?** | Shallow (`{...obj}`) copies the top level; nested objects stay shared. Deep (`structuredClone`) copies everything. |
-| **Is JS pass-by-reference?** | No. Always pass-by-value; for objects the value is a reference ("call by sharing"). |
-| **Why `0.1 + 0.2 !== 0.3`?** | All numbers are 64-bit floats; 0.1 can't be represented exactly in binary. |
-| **Falsy values?** | `false, 0, -0, 0n, "", null, undefined, NaN`. Everything else, including `[]`, `{}` and `"0"`, is truthy. |
-| **`||` vs `??`?** | `||` falls back on any falsy value; `??` only on `null`/`undefined`. |
-
----
-
-## 7. The Mental Model
-
-```text
-                     NAME  ──── arrow ────►  VALUE
-                                               │
-                 ┌─────────────────────────────┴───────────────┐
-                 ↓                                             ↓
-            PRIMITIVE  📄                                  OBJECT  🔗
-   string number bigint boolean                   {}, [], functions,
-   undefined null symbol                          Date, Map, Set …
-                 │                                             │
-         immutable (replace, never edit)          mutable (edit in place)
-         copy  = photocopy                        copy  = share the link
-         ===   compares VALUE                     ===   compares IDENTITY
-```
-
-> **Arrows, not boxes. Photocopies vs shared links.** Hold onto those two images and the
-> rest of this note rebuilds itself.
-
-➡️ **Next:** [002 — var, let & const](002-var-let-const.md)
+| **What is dynamically typed?** | Values have types; reassignable bindings can hold different types over time. |
+| **How many language types?** | Seven primitives plus object; arrays and functions are objects. |
+| **Null, undefined, undeclared?** | Two distinct absence values versus no binding; reading an undeclared name throws. |
+| **Why isn't `typeof` enough?** | Null, arrays and NaN need specialised checks; TDZ access still throws. |
+| **Is JS pass-by-reference?** | Pass-by-value; copied object references share identity, but parameter reassignment stays local. |
+| **Does spread deeply clone?** | No: nested objects remain shared; `structuredClone` supports deep copying only for supported data. |
+| **Main numeric traps?** | Binary rounding, unsafe integers, NaN inequality and mixed BigInt/Number arithmetic. |
+| **Why use Symbols?** | Collision-resistant keys and language protocols; fresh symbols are unique, registry symbols can be shared, and neither provides privacy. |
+| **Are built-ins extra language types?** | No: Array, Map, Date and others are specialised objects; use category checks with realm limitations in mind. |
+| **`||` vs `??`?** | Falsy fallback versus nullish fallback; both return operands and short-circuit. |

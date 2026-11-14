@@ -1,517 +1,244 @@
 # 002 — var, let & const
 
-> **One-line takeaway:** `var` is the 1995 keyword: **function-scoped** and hoisted as `undefined`, which leads to silent bugs. `let` and `const` (ES2015) are **block-scoped** and locked until declared (the **TDZ**), so mistakes fail loudly. Use **`const` by default, `let` when the value must change, and never `var`.**
-
-> 🧪 **How to use this note:** Answer every **Predict the output** in your head before
-> opening it. Run the snippets in DevTools (F12 → Console). Tip: paste each one inside
-> `{ }` so `let`/`const` names don't clash between runs.
+> **One-line takeaway:** Separate **scope**, **initialisation** and **reassignment**.
+> `var` is initialised early; `let`/`const` have a TDZ. `const` fixes the binding,
+> not the object's state. Prefer `const`; use `let` for reassignment.
 
 ---
 
-## 1. The Three Keywords at a Glance
+## 1. Core Mental Model — Three Independent Questions
 
 ```text
-var    → 1995 · function-scoped · hoisted as undefined · redeclarable
-let    → 2015 · block-scoped    · TDZ                  · reassignable
-const  → 2015 · block-scoped    · TDZ                  · NOT reassignable
+Declaration → Where does the binding exist?       (scope)
+            → When can it first be accessed?      (initialisation / TDZ)
+            → Can it later hold a different value? (reassignment)
 ```
+
+A **binding associates an identifier with a value within a scope**; it is distinct from
+the value. `user = other` reassigns the binding; `user.name = "Avi"` mutates the referenced
+object. Multiple bindings can refer to that same object.
+
+For value semantics, see [001 — Variables & Data Types](001-variables-and-data-types.md).
+
+### Environment Records — the specification's binding model
+
+ECMAScript uses **Environment Records** to model bindings and identifier resolution.
+A record tracks binding state and links to an outer record; lookup starts at the current
+environment and follows those outer links until it finds the name or reaches the end.
+
+```text
+Inner environment { user: uninitialised } → outer { user: object } → … → null
+                  ↑ lookup stops here; TDZ does not fall back to the outer user
+```
+
+The braces are conceptual. Declarative records model lexical bindings; object records use
+object properties; global records combine both. **This does not mandate object storage or
+a heap/stack layout.** See [ECMAScript: Environment Records](https://tc39.es/ecma262/multipage/executable-code-and-execution-contexts.html#sec-environment-records).
+
+---
+
+## 2. Key Concepts — Scope & Declaration Rules
 
 | Feature | `var` | `let` | `const` |
 |---|---|---|---|
-| **Scope** | Function | Block `{ }` | Block `{ }` |
-| **Hoisted?** | ✅ set to `undefined` | ✅ but **locked** (TDZ) | ✅ but **locked** (TDZ) |
-| **Use before declaring** | `undefined` 🤫 silent | `ReferenceError` 📢 | `ReferenceError` 📢 |
-| **Redeclare in same scope** | ✅ allowed | ❌ SyntaxError | ❌ SyntaxError |
-| **Reassign** | ✅ | ✅ | ❌ TypeError |
-| **Must initialise** | No | No | **Yes** |
-| **Top-level → `window` property** | ✅ | ❌ | ❌ |
+| **Scope** | Function, or top-level script/module; also class static block | Lexical: block, function body, script/module | Same as `let` |
+| **Before declaration executes** | New binding already initialised to `undefined` | Binding exists, uninitialised: TDZ | Same as `let` |
+| **Reassignment** | Allowed | Allowed | `TypeError` after initialisation |
+| **Redeclaration in same scope** | Repeated `var` allowed; lexical conflicts rejected | Rejected | Rejected |
+| **Initializer required** | No | No: `let x;` initialises to `undefined` when reached | Yes, except `for...of` / `for...in` declarations |
+| **Browser classic-script top level** | Global object property | Global lexical binding | Global lexical binding |
 
-> 🧠 Every row in this table answers one question: *"How easy is it to shoot yourself in
-> the foot?"* `var` makes it easy. `let`/`const` make it hard.
+### Scope and shadowing
 
----
-
-## 2. Scope: Where Can a Variable Be Seen?
-
-> **Scope is the region of code where a variable is visible.**
-
-### 🏢 The office analogy
-
-```text
-var        → a notice pinned on the WHOLE FLOOR's board
-             visible anywhere inside the FUNCTION it was declared in
-
-let/const  → a sticky note inside ONE MEETING ROOM
-             visible only inside the nearest { } block
-             (if, for, while, or a bare { })
-```
+**Shadowing** creates a separate inner binding; assignment changes whichever binding
+name resolution finds. An ordinary `if`/`for` block does not scope `var`.
 
 ```js
 function demo() {
-  if (true) {
-    var  floorNotice = "everyone sees me";
-    let  roomNote    = "only this room";
+  var x = 1;
+  let y = 1;
+  {
+    var x = 2; // same function binding
+    let y = 2; // distinct block binding
   }
-  console.log(floorNotice);  // "everyone sees me"
-  console.log(roomNote);     // ReferenceError: roomNote is not defined
+  console.log(x, y); // 2 1
 }
 ```
 
-```text
-function demo() { ───────────────────────────── var lives here
-│   if (true) { ──────────────────── let lives here
-│   │   var floorNotice
-│   │   let roomNote
-│   } ─────────────────────────────── roomNote dies here
-│   floorNotice ✅   roomNote ❌
-} ──────────────────────────────────────────── floorNotice dies here
-```
-
-> 🧪 **Predict the output**
-> ```js
-> var x = "outer";
-> if (true) {
->   var x = "inner";
-> }
-> console.log(x);
->
-> let y = "outer";
-> if (true) {
->   let y = "inner";
-> }
-> console.log(y);
-> ```
-
-<details>
-<summary>Show answer</summary>
-
-`"inner"`, then `"outer"`.
-
-`var` ignores the `if` block. Both `var x` lines are the **same** variable, so the inner
-one overwrites it. `let y` inside the block is a **new, separate** variable that only
-lives in that block (this is called *shadowing*). The outer `y` is untouched.
-</details>
-
-### Redeclaring: why `var` is risky
-
-```js
-var count = 5;
-// … 200 lines later, someone else writes:
-var count = 0;     // ✅ no error. The original value is silently wiped out.
-
-let total = 5;
-let total = 0;     // ❌ SyntaxError: Identifier 'total' has already been declared
-```
+`var x;` preserves an existing value; `var x = 2` overwrites it. Conflicting lexical/`var`
+declarations cause `SyntaxError`; a nested `let` may shadow an outer `var`.
+`switch` cases share a block scope; brace cases needing separate
+lexical declarations. See [MDN: `var`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/var)
+and [MDN: lexical redeclarations](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/let#redeclarations).
 
 ---
 
-## 3. Hoisting: What Happens *Before* Your Code Runs
+## 3. Hoisting, Initialisation & the TDZ
 
-### 🏫 The classroom analogy
+**Hoisting** describes pre-execution declaration behaviour, not source movement. Binding
+creation and initialisation are separate specification operations; engines need not use
+a literal two-pass scan.
 
-A teacher **takes the attendance register first**, writing down every name, *then* starts
-the lesson. JavaScript does the same with every scope:
+**Lifecycle:** create binding → initialise → read/access → reassign if mutable.
+`var` is initialised during declaration instantiation; lexical bindings wait until their
+declarations execute. An uninitialised binding has **no value**, not the value `undefined`.
 
-```text
-          Your code in a scope
-                   │
-                   ↓
- ┌──────────────────────────────────────────────────┐
- │ PHASE 1: CREATION  ("take attendance")           │
- │   scan the scope for declarations                │
- │   register every name, before running anything   │
- │     var a       → registered, set to undefined   │
- │     let b       → registered, LOCKED             │
- │     const c     → registered, LOCKED             │
- │     function f  → registered, set to the function│
- └──────────────────────────────────────────────────┘
-                   │
-                   ↓
- ┌──────────────────────────────────────────────────┐
- │ PHASE 2: EXECUTION  ("start the lesson")         │
- │   run the code line by line                      │
- │   each "= value" happens only when its line runs │
- └──────────────────────────────────────────────────┘
-```
+| Declaration | State before its statement runs | Early use |
+|---|---|---|
+| `var n = 10` | A newly created `n` already holds `undefined` | Read succeeds; initializer has not run. |
+| `let n = 10` / `const n = 10` | Binding exists but is uninitialised | Read or write throws `ReferenceError`. |
+| `function f() {}` | Function value available in ordinary function-body scope | Calling before the declaration works. |
+| `var f = function () {}` | `f` holds `undefined` | Calling it throws `TypeError`. |
 
-> **Hoisting** = every declaration is *known* from the top of its scope, because it was
-> registered in Phase 1. **Nothing is physically moved.** And only the **name** is
-> registered early, never the `= value` part.
+Function expressions follow their binding's rules. Block-level function declarations have
+additional strict/sloppy rules; do not generalise function-body behaviour to every block.
 
-So `var`, `let`, `const` and functions are **all hoisted**. The only difference is what the
-name holds *before* its line runs.
+### TDZ: the binding exists before its value does
 
-### 🪑 The seat analogy
+The TDZ lasts from scope entry until **initialisation completes**. The inner binding
+shadows an outer binding throughout that scope, including during its own initializer:
+`let x = x` reads the uninitialised inner `x` and throws.
 
-```text
-var        → seat has a DUMMY sitting in it (undefined)
-             you can "talk" to it early. It answers "undefined", no complaint.
+`typeof missingName` returns `"undefined"` for an unresolvable name, but `typeof x` in
+`x`'s TDZ throws. TDZ depends on **execution time**, not textual position: a function
+written above `let x` can safely read it when called after initialisation.
 
-let/const  → seat is ROPED OFF with a "RESERVED" sign
-             touching it early → alarm (ReferenceError)
-             the rope comes off only when the declaration line runs
+> **Interview phrasing:** “Lexical bindings exist before their declarations execute but
+> remain uninitialised.” Whether you call this “hoisted” varies by convention; explain the
+> behaviour. See [MDN: hoisting](https://developer.mozilla.org/en-US/docs/Glossary/Hoisting)
+> and [TDZ](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/let#temporal_dead_zone_tdz).
 
-function   → the real person is already sitting there
-             you can call it before its line
-```
+---
 
-### `var`: hoisted with `undefined` 🤫
+## 4. Critical Distinction — `const` vs Immutability
+
+`const` prevents rebinding, including `count++` because increment writes back to the
+binding. Reassignment throws in both strict and sloppy mode.
+
+`const items = [1]; items.push(2);` mutates successfully; `items = []` throws.
+
+`Object.freeze(obj)` is **shallow**: it prevents adding/removing the object's own
+properties and makes its own data properties non-writable. It does not recursively freeze
+nested objects or guarantee that every kind of internal object state is immutable.
+
+See [MDN: Object.freeze](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/freeze).
+Challenge C contrasts nested mutation with a rejected property write.
+
+---
+
+## 5. Edge Cases — Globals, Strict Mode & Loops
+
+### Top-level bindings depend on the execution environment
+
+| Context | Top-level `var` | Top-level `let` / `const` |
+|---|---|---|
+| **Browser classic `<script>`** | Creates/reuses a global object binding; normally visible via `globalThis` / `window` | Global lexical bindings, not global object properties |
+| **ES module** | Module-scoped; no automatic global property | Module-scoped |
+| **Node.js CommonJS file** | Scoped to the module wrapper | Scoped to the module wrapper |
+
+Strict mode does not make a classic script module-scoped; REPL/DevTools rules may differ.
+See [MDN: script vs module declarations](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/var#description).
+
+Assignment to an **unresolvable name** usually creates a global object property in sloppy
+mode; strict mode throws `ReferenceError`. This is assignment, not a `var` declaration.
+ES modules and class bodies are automatically strict; ordinary scripts/functions need
+`"use strict"` to opt in. See [MDN: strict mode](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Strict_mode).
+
+### Loop bindings
+
+`for (let i = 0; …)` creates per-iteration bindings. Declaring `let i` **outside** the loop
+and using `for (i = 0; …)` shares one binding instead. `for (const item of values)` works
+because each iteration initialises a new binding; `for (const i = 0; …; i++)` fails on
+increment. These are binding rules, not special timer behaviour; see [MDN: for-loop lexical declarations](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for#lexical_declarations_in_the_initialization_block).
+
+**Modern practice:** default to `const`, use `let` for reassignment, keep scopes narrow.
+Review legacy `var` migrations: changing scope can change behaviour.
+
+---
+
+## 6. Active Recall — Predict Before Expanding
+
+Run each challenge independently. Uncaught exceptions stop the remaining statements.
+
+### A. Shadowing + `typeof` in the TDZ
 
 ```js
-console.log(a);   // undefined   ← no error!
-var a = 10;
-console.log(a);   // 10
-```
-
-What the engine actually does:
-
-```text
-Phase 1:  a = undefined           (name registered, value NOT yet)
-Phase 2:  console.log(a)  → undefined
-          a = 10                  ← "= 10" happens only now
-          console.log(a)  → 10
-```
-
-> That silent `undefined` is the problem. Your code keeps running with a wrong value, and
-> the bug surfaces somewhere far away.
-
-### `let` / `const`: hoisted but locked (the Temporal Dead Zone) 📢
-
-```js
-console.log(b);   // ReferenceError: Cannot access 'b' before initialization
-let b = 20;
-console.log(b);   // 20
-```
-
-The stretch where `b` exists but is still roped off is the **Temporal Dead Zone (TDZ)**:
-
-```text
-{ ◄── scope starts: b is registered but LOCKED 🔒
-  │
-  │   console.log(b);   ✗ ReferenceError   ┐
-  │   b = 5;            ✗ ReferenceError   ├─ TEMPORAL DEAD ZONE
-  │   typeof b;         ✗ ReferenceError   ┘
-  │
-  │   let b = 20;       ◄── rope comes off 🔓 (initialised)
-  │
-  │   console.log(b);   ✓ 20
+let value = "outer";
+{
+  console.log(typeof value);
+  let value = "inner";
 }
 ```
 
-> 🔍 **Read the error message closely:** *"Cannot access 'b' before initialization"*, not
-> *"b is not defined"*. The engine is admitting it **already knows `b` exists**. That's
-> your proof that `let` is hoisted.
-
-### 🧪 Proof that `let` is hoisted
-
-> **Predict the output**
-> ```js
-> let x = 1;
-> {
->   console.log(x);
->   let x = 2;
-> }
-> ```
-
 <details>
-<summary>Show answer</summary>
+<summary>Show answer & reason</summary>
 
-**`ReferenceError`**, not `1`!
+`ReferenceError`; nothing is logged. The inner binding shadows the outer one from block
+entry, but is still uninitialised. `typeof` only tolerates an unresolvable name, not a TDZ
+binding. Moving the declaration before the log produces `"string"`.
 
-```text
-Phase 1 of the inner { } registers its OWN x (locked 🔒).
-That inner x hides (shadows) the outer x from the very first line of the block.
-So console.log(x) finds the inner x, which is still in the TDZ → error.
-```
-
-If `let` were *not* hoisted, the engine would have found the outer `x` and printed `1`.
 </details>
 
-### ⏱️ "Temporal" means *time*, not *position*
-
-> **Predict the output**
-> ```js
-> function greet() {
->   console.log(msg);   // written ABOVE the declaration
-> }
-> let msg = "hello";
-> greet();
-> ```
-
-<details>
-<summary>Show answer</summary>
-
-**`"hello"`** ✅. The TDZ is about **when the line runs**, not where it is written.
-`greet()` is *called* after `let msg = "hello"` has run, so the rope is already off. Move
-`greet();` above the `let` line and it throws.
-</details>
-
-### Hoisting summary
-
-| Declaration | Hoisted? | Before its line, it holds | Accessing early gives |
-|---|---|---|---|
-| `var x` | ✅ | `undefined` (dummy) | `undefined` 🤫 |
-| `let x` | ✅ | nothing (locked 🔒) | `ReferenceError` 📢 |
-| `const x` | ✅ | nothing (locked 🔒) | `ReferenceError` 📢 |
-| `function f(){}` | ✅ | the whole function | works ✅ |
-
-> The TDZ is a **feature**: it turns "used too early" from a silent bug into a loud error.
-
----
-
-## 4. ⚡ The Classic Interview Question: `var` vs `let` in a Loop
-
-> 🧪 **Predict the output** of both loops. Commit to an answer first!
-> ```js
-> for (var i = 0; i < 3; i++) {
->   setTimeout(() => console.log(i), 0);
-> }
->
-> for (let j = 0; j < 3; j++) {
->   setTimeout(() => console.log(j), 0);
-> }
-> ```
-
-<details>
-<summary>Show answer</summary>
-
-`var` loop → **`3 3 3`**
-`let` loop → **`0 1 2`**
-
-Most people guess `0 1 2` for both. Read on for why.
-</details>
-
-You need **two key ideas** to explain it.
-
-### 🔑 Key idea 1: the callbacks run *after* the loop finishes
-
-From note 001: `setTimeout` hands the callback to the host's timer. It runs only when the
-call stack is empty, so **the whole loop finishes first**, even with a 0 ms delay.
-
-### 🔑 Key idea 2: a closure remembers the *variable*, not the value
-
-`() => console.log(i)` does **not** take a photo of `i`'s value when created. It keeps a
-**live link to the variable `i`** and reads it whenever it finally runs.
-
-```text
-A closure is NOT a photo 📸 of the value
-A closure IS a window 🪟 onto the variable: it sees whatever is there NOW
-```
-
-So the real question is: **how many `i` variables are there?**
-
-### 📋 Case 1: `var`, ONE shared whiteboard
-
-`var` is function-scoped, so the loop has **one** `i`, like a single whiteboard that every
-callback will read later.
-
-```text
-Step   What happens                          i on the board   Queue
-────   ───────────────────────────────────   ──────────────   ───────────────
- 1     i = 0 → schedule cb1 (watches i)            0          [cb1]
- 2     i++   → schedule cb2 (watches i)            1          [cb1, cb2]
- 3     i++   → schedule cb3 (watches i)            2          [cb1, cb2, cb3]
- 4     i++   → is 3 < 3? NO → loop ends            3
-────   stack is empty → event loop runs the queue ──────────────────────────
- 5     cb1 reads the board                         3   → prints 3
- 6     cb2 reads the board                         3   → prints 3
- 7     cb3 reads the board                         3   → prints 3
-```
-
-```text
-   cb1 ──┐
-   cb2 ──┼──►  i  (ONE variable, final value 3)
-   cb3 ──┘
-```
-
-> 🤔 *Why 3 and not 2?* The loop only stops when `i++` pushes `i` to 3 and the check
-> `3 < 3` fails. So the board's final value is **3**.
-
-### 📒 Case 2: `let`, a NEW notebook every iteration
-
-With `for (let …)`, JavaScript creates a **fresh `j` for every iteration**, copying in the
-current value. Each callback watches its own notebook.
-
-```text
-Iteration 1:  new j₁ = 0   → cb1 watches j₁
-Iteration 2:  new j₂ = 1   → cb2 watches j₂
-Iteration 3:  new j₃ = 2   → cb3 watches j₃
-(j++ happens on the NEXT iteration's fresh copy, so j₁, j₂, j₃ never change)
-```
-
-```text
-   cb1 ──►  j₁ = 0
-   cb2 ──►  j₂ = 1
-   cb3 ──►  j₃ = 2
-```
-
-The callbacks *still* run after the loop, but each reads its own `j` → **`0 1 2`**.
-
-### 🛠️ How people fixed it before `let` existed
-
-Wrap each iteration in a function that is called immediately (an **IIFE**). Every call
-creates a brand-new variable `k`:
+### B. The classic asynchronous loop
 
 ```js
 for (var i = 0; i < 3; i++) {
-  (function (k) {                         // k = a NEW variable on every call
-    setTimeout(() => console.log(k), 0);
-  })(i);                                  // pass in the current value of i
+  setTimeout(() => console.log("var", i), 0);
 }
-// 0 1 2
+for (let j = 0; j < 3; j++) {
+  setTimeout(() => console.log("let", j), 0);
+}
 ```
-
-> `let` in a `for` loop is basically this fix built into the language.
-
-### 🎤 Say it in 30 seconds
-
-> "The callbacks run after the loop ends, and closures capture **variables**, not values.
-> With `var` there's a single function-scoped `i` shared by all three callbacks; it ends at
-> 3, so they print 3 3 3. With `let`, each iteration gets a fresh block-scoped binding, so
-> each callback sees its own value and prints 0 1 2."
-
----
-
-## 5. `const` Does NOT Mean "Can't Change"
-
-`const` locks the **arrow** (the binding), **not the value** it points at. (Remember
-*arrows, not boxes* from [note 001](001-variables-and-data-types.md).)
-
-> 🧪 **Which lines throw?**
-> ```js
-> const arr = [1, 2];
-> arr.push(3);              // line A
-> arr[0] = 99;              // line B
-> arr = [7, 8, 9];          // line C
->
-> const n = 5;
-> n++;                      // line D
-> ```
 
 <details>
-<summary>Show answer</summary>
+<summary>Show answer & reason</summary>
 
-Only **C** and **D** throw `TypeError: Assignment to constant variable`.
+`var` callbacks print `3, 3, 3`; `let` callbacks print `0, 1, 2`. Both loops finish before
+their callbacks run in ordinary browser/Node execution.
 
-```text
-A, B → change the OBJECT the arrow points at        ✅ allowed
-C    → move the arrow to a new array                ❌
-D    → n++ means n = n + 1, i.e. move the arrow     ❌
-```
+Closures retain access to their **lexical environment**, not value snapshots. All `var`
+callbacks resolve the same `i` (now 3); each `let` callback resolves its iteration's `j`.
+The update expression operates on the next iteration's binding. The old IIFE workaround
+created a separate parameter binding per call.
+
+See the [timer refresher](../001-getting-started/001-introduction-to-javascript.md#the-revealing-example)
+and [MDN's loop explanation](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for#lexical_declarations_in_the_initialization_block).
+
 </details>
 
-```text
-const arr ──🔒──►  [99, 2, 3]
-           arrow     contents
-           LOCKED    still editable
-```
-
-Want the **contents** locked too? Use `Object.freeze`:
+### C. Constant binding vs shallow freezing
 
 ```js
-const cfg = Object.freeze({ port: 80, db: { host: "x" } });
-cfg.port = 3000;       // ignored (TypeError in strict mode)
-cfg.db.host = "y";     // ⚠️ WORKS: freeze is SHALLOW, nested objects stay editable
+"use strict";
+const state = Object.freeze({ nested: { n: 1 } });
+state.nested.n++;
+console.log(state.nested.n);
+state.extra = true;
+console.log("done");
 ```
+
+<details>
+<summary>Show answer & reason</summary>
+
+Logs `2`, then throws `TypeError`: no `"done"`. Only the outer object is frozen. In sloppy
+mode the property write is ignored and `"done"` logs. Rebinding `state` throws in either mode.
+
+</details>
+
+**Previous:** [001 — Variables & Data Types](001-variables-and-data-types.md).
 
 ---
 
-## 6. Two More `var` Gotchas
-
-### Top-level `var` leaks onto `window`
-
-```js
-var  appName = "Shop";
-let  version = 2;
-window.appName;   // "Shop"     ← polluted the global object
-window.version;   // undefined  ← let stays out of it
-```
-
-### Forgetting the keyword creates a global by accident
-
-```js
-function setTotal() {
-  total = 100;      // no var/let/const!
-}
-setTotal();
-console.log(total); // 100 → an accidental GLOBAL variable
-```
-
-```text
-Sloppy mode → silently creates a global                  🤫
-Strict mode → ReferenceError: total is not defined       📢
-              ("use strict", ES modules and classes are strict automatically)
-```
-
----
-
-## 7. Which One Should I Use?
-
-```text
-                Declaring a variable
-                         │
-                         ↓
-      Will this name ever point to a different value?
-                         │
-              ┌──────────┴──────────┐
-              NO                    YES
-              ↓                     ↓
-            const                  let
-       (the default,         (counters, accumulators,
-        ~90% of cases)        values that get reassigned)
-
-                  var → ❌ never in new code
-                  (you only need to READ it in legacy code)
-```
-
-> 💼 `const` by default also *communicates intent*. A reader instantly knows the binding
-> never changes, and only has to watch the `let`s.
-
----
-
-## 8. Quick Recall — Interview One-Liners
+## 7. Quick Recall — Interview One-Liners
 
 | Question | Crisp answer |
 |---|---|
-| **`var` vs `let` vs `const`?** | `var`: function-scoped, hoisted as `undefined`, redeclarable. `let`: block-scoped, TDZ, reassignable. `const`: block-scoped, TDZ, no reassignment. |
-| **What is scope?** | The region where a variable is visible. `var` → whole function; `let`/`const` → nearest `{ }` block. |
-| **What is hoisting?** | In the creation phase, every declaration is registered at the top of its scope before code runs. Only names are hoisted, not assignments. |
-| **Are `let` and `const` hoisted?** | Yes, but left uninitialised. The error "Cannot access before initialization" (not "not defined") proves the engine knows they exist. |
-| **What is the TDZ?** | The time from scope start until a `let`/`const` declaration runs. Any access in that window throws `ReferenceError`. It's about *time*, not position. |
-| **Are function declarations hoisted?** | Yes, fully. You can call them before their line. |
-| **`var` loop with `setTimeout` prints?** | `3 3 3`: callbacks run after the loop and share one `i`, which ended at 3. With `let`, `0 1 2`: a fresh binding per iteration. Pre-ES6 fix: IIFE. |
-| **Do closures capture values or variables?** | Variables: a live link read when the function runs, not a snapshot. |
-| **Does `const` make objects immutable?** | No. It locks the binding, not the object. `Object.freeze` locks the object, but only shallowly. |
-| **Can you redeclare `let`?** | Not in the same scope (SyntaxError). `var` allows it silently. |
-| **Assign without a keyword?** | Sloppy mode creates an accidental global; strict mode throws `ReferenceError`. |
-| **Which should you use?** | `const` by default, `let` when reassignment is needed, never `var`. |
-
----
-
-## 9. The Mental Model
-
-```text
-                          DECLARE A NAME
-                                │
-          ┌─────────────────────┴─────────────────────┐
-          ↓                                           ↓
-         var  🤫                                let / const  📢
-          │                                           │
-  scope: whole FUNCTION 🏢                   scope: nearest { } BLOCK 🚪
-          │                                           │
-  hoisted → dummy "undefined" 🪑              hoisted → ROPED OFF 🔒 (TDZ)
-  early use = silent bug                      early use = loud ReferenceError
-          │                                           │
-  loop: ONE shared variable 📋                loop: NEW variable per iteration 📒
-  → 3 3 3                                     → 0 1 2
-          │                                           │
-  redeclare ✅  leaks to window ✅             redeclare ❌  window ❌
-                                                      │
-                                         const = arrow locked 🔒
-                                                 contents still editable
-```
-
-> **Roll call first, lesson second.** `var` gets a dummy, `let`/`const` get a rope.
-> `var` shares one whiteboard; `let` hands out a new notebook every loop.
-
-⬅️ **Previous:** [001 — Variables & Data Types](001-variables-and-data-types.md)
+| **`var` vs `let` vs `const`?** | `var`: broader scope and early undefined initialisation; `let`/`const`: lexical scope and TDZ; `const` rejects rebinding. |
+| **Are `let` and `const` hoisted?** | Bindings exist before execution reaches them, but are uninitialised; describe the behaviour rather than debating the label. |
+| **What is an Environment Record?** | An abstract specification model for bindings, with an outer link used for identifier resolution; not a mandated storage layout. |
+| **What ends the TDZ?** | Completion of binding initialisation, not merely reaching an earlier reference or assignment. |
+| **Why does shadowing sometimes throw?** | Name lookup finds the inner binding even before its initialisation; it does not fall back to the outer value. |
+| **Why `3 3 3` vs `0 1 2`?** | One shared `var` binding versus per-iteration `let` bindings, read after the loops finish. |
+| **Does `const` mean immutable?** | No: the binding is fixed; object mutation is independent, and `Object.freeze` is shallow. |
+| **Does top-level `var` create a global property?** | In a classic script, normally yes; in ES modules and CommonJS files, no. |
+| **What does strict mode change here?** | Unresolvable assignment and forbidden property writes throw; TDZ and const-reassignment errors already occur without it. |
