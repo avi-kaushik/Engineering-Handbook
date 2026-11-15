@@ -39,6 +39,9 @@ notes/
 |---|---|---|
 | 001 | Variables & Data Types: The 8 Types, `typeof`, Primitives vs Objects, Truthy & Falsy | [001-variables-and-data-types.md](002-fundamentals/001-variables-and-data-types.md) |
 | 002 | var, let & const: Scope, Hoisting, TDZ & the Classic Loop Question | [002-var-let-const.md](002-fundamentals/002-var-let-const.md) |
+| 003 | Loops & Control Flow: Conditions, Execution Order, break & continue | [003-loops-and-control-flow.md](002-fundamentals/003-loops-and-control-flow.md) |
+| 004 | Collection Traversal: Enumeration, Iterables, Array Methods & Sparse Arrays | [004-collection-traversal-and-iteration.md](002-fundamentals/004-collection-traversal-and-iteration.md) |
+| 005 | Iterable & Iterator Protocols, Generators & Async Iteration | [005-iterable-iterator-protocols-and-generators.md](002-fundamentals/005-iterable-iterator-protocols-and-generators.md) |
 
 ---
 

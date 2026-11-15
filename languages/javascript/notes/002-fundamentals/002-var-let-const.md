@@ -226,6 +226,7 @@ mode the property write is ignored and `"done"` logs. Rebinding `state` throws i
 </details>
 
 **Previous:** [001 — Variables & Data Types](001-variables-and-data-types.md).
+**Next:** [003 — Loops & Control Flow](003-loops-and-control-flow.md).
 
 ---
 

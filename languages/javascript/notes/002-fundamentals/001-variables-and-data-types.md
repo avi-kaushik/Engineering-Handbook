@@ -59,6 +59,8 @@ do not establish identity.**
 properties are copied by object spread. See [MDN: Symbol](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol);
 challenge C applies this to plugin metadata.
 
+For iterator consumption, see [005 — Iteration Protocols](005-iterable-iterator-protocols-and-generators.md#2-iterable-vs-iterator).
+
 ### `undefined` vs `null` vs an undeclared name
 
 | Situation | Result / meaning |
